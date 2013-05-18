@@ -126,10 +126,11 @@ public:
 	}
 	void new_pos(bool domove) {
 		printf("x moved: %d y moved: %d\n", x-x_start, y-y_start);
-		if (abs(x-x_start) > x_max * 2 / width || abs(y-y_start) > y_max * 2 / width) {
-			printf("not tap\n");
-			is_tap = false;
-		}
+		if (is_tap)
+			if (abs(x-x_start) > x_max * 2 / width || abs(y-y_start) > y_max * 2 / width) {
+				printf("not tap\n");
+				is_tap = false;
+			}
 		if (touched && domove) {
 			if (is_vscroll) {
 				int dx = x - vs_last_x;
@@ -172,7 +173,6 @@ public:
 			dpy->get_mouse_pos(mouse_start_x, mouse_start_y);
 			gettimeofday(&down_time, NULL);
 		}
-		printf("touch tap: %d\n", is_tap);
 		touched = true;
 	}
 	int get_btn_id() {
