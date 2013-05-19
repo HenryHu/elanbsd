@@ -1,8 +1,13 @@
+#define USE_XTEST
+
 #include <iostream>
 #include <sys/mouse.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/time.h>
+#ifdef USE_XTEST
+#include <X11/extensions/XTest.h>
+#endif
 using namespace std;
 
 /* aux device commands (sent to KBD_DATA_PORT) */
@@ -45,13 +50,30 @@ void errexit(const string& err) {
 
 class Mouse;
 
-class Display {
+class XDisplay {
 	int dpy_x, dpy_y;
+#ifdef USE_XTEST
+	Display *display;
+	int screen_number;
+#endif
 public:
-	Display() {
+	XDisplay() {
 		FILE *f = popen("xdotool getdisplaygeometry", "r");
 		fscanf(f, "%d %d", &dpy_x, &dpy_y);
 		fclose(f);
+#ifdef USE_XTEST
+		display = XOpenDisplay(NULL);
+		if (!display)
+			errexit("fail to open display");
+		int event_base, err_base, major, minor;
+		if (!XTestQueryExtension(display, &event_base, &err_base, &major, &minor))
+			errexit("No XTEST extension found");
+		printf("using XTEST %d.%d\n", major, minor);
+		screen_number = -1;
+#endif
+	}
+	~XDisplay() {
+		XCloseDisplay(display);
 	}
 	void get_mouse_pos(int &x, int &y) {
 		FILE *f = popen("xdotool getmouselocation", "r");
@@ -59,22 +81,56 @@ public:
 		fclose(f);
 	}
 	void move(int x, int y) {
+		printf("dpy:move %d,%d\n", x, y);
+#ifdef USE_XTEST
+		Bool succ = XTestFakeMotionEvent(display, screen_number, x, y, CurrentTime);
+		if (!succ)
+			errexit("fail to fake motion event");
+		XFlush(display);
+#else
 		char buf[1024];
 		snprintf(buf, sizeof(buf), "xdotool mousemove -- %d %d", x, y);
 		system(buf);
+#endif
 	}
 	void move_rel(int dx, int dy, int x_max, int y_max) {
 		int rx = dx * dpy_x / x_max;
 		int ry = -dy * dpy_y / y_max;
-		printf("move %d,%d\n", rx, ry);
+		printf("dpy:move_rel %d,%d\n", rx, ry);
+		if (rx == 0 && ry == 0) return;
+#ifdef USE_XTEST
+		Bool succ = XTestFakeRelativeMotionEvent(display, rx, ry, CurrentTime);
+		if (!succ)
+			errexit("fail to fake relative motion event");
+		XFlush(display);
+#else
 		char buf[1024];
 		snprintf(buf, sizeof(buf), "xdotool mousemove_relative -- %d %d", rx, ry);
 		system(buf);
+#endif
 	}
 	void click(int btn) {
+		printf("dpy:click %d\n", btn + 1);
+#ifdef USE_XTEST
+		XTestFakeButtonEvent(display, btn + 1, True, CurrentTime);
+		XTestFakeButtonEvent(display, btn + 1, False, CurrentTime);
+		XFlush(display);
+#else
 		char buf[1024];
 		snprintf(buf, sizeof(buf), "xdotool click %d", btn + 1);
 		system(buf);
+#endif
+	}
+	void press(bool down, int id) {
+		printf("dpy:press %d,%s\n", id, down ? "down" : "up");
+#ifdef USE_XTEST
+		XTestFakeButtonEvent(display, id, down ? True : False, CurrentTime);
+		XFlush(display);
+#else
+		char buf[1024];
+		snprintf(buf, sizeof(buf), "xdotool mouse%s %d", down ? "down" : "up", id + 1);
+		system(buf);
+#endif
 	}
 };
 
@@ -82,14 +138,13 @@ class Button {
 	bool down;
 	int id;
 public:
+	XDisplay *dpy;
 	void set_id(int newid) { id = newid; }
 	void update(bool state) {
 		if (down != state) {
 			down = state;
 			printf("button %d %s\n", id, down ? "down" : "up");
-			char buf[1024];
-			snprintf(buf, sizeof(buf), "xdotool mouse%s %d", down ? "down" : "up", id + 1);
-			system(buf);
+			dpy->press(down, id + 1);
 		}
 	}
 };
@@ -107,7 +162,7 @@ class Finger {
 	bool is_tap, is_vscroll;
 	bool touched;
 public:
-	Display *dpy;
+	XDisplay *dpy;
 	Finger() {
 		touched = false;
 		is_tap = false;
@@ -195,7 +250,6 @@ public:
 			printf("%d release\n", id);
 		touched = false;
 
-		printf("%d tap: %d\n", id, is_tap);
 		if (is_tap && !clicked) {
 			struct timeval up_time;
 			gettimeofday(&up_time, NULL);
@@ -235,7 +289,7 @@ class Mouse {
 	void check(int ret, const string& err) {
 		if (ret < 0) errexit(err);
 	}
-	Display dpy;
+	XDisplay dpy;
 
 public:
 	Mouse() {
@@ -243,9 +297,10 @@ public:
 			fingers[i].set_id(i);
 			fingers[i].dpy = &dpy;
 		}
-		for (int i=0; i<sizeof(btns) / sizeof(Button); i++)
+		for (int i=0; i<sizeof(btns) / sizeof(Button); i++) {
 			btns[i].set_id(i);
-
+			btns[i].dpy = &dpy;
+		}
 	}
 	void open_dev() {
 		mousemode_t info;
@@ -483,19 +538,16 @@ public:
 						fingers[sid].add_delta(dx2, dy2, cnt == 1);
 
 					if (dy1 > 0 && dy2 > 0) {
-						system("xdotool mousedown 4");
-						system("xdotool mouseup 4");
+						dpy.click(4);
 					}
 					if (dy1 < 0 && dy2 < 0) {
-						system("xdotool mousedown 5");
-						system("xdotool mouseup 5");
+						dpy.click(5);
 					}
 					if (dx1 > 0 && dx2 > 0) {
-						system("xdotool mousedown 6");
-						system("xdotool mouseup 6"); }
+						dpy.click(6);
+					}
 					if (dx1 < 0 && dx2 < 0) {
-						system("xdotool mousedown 7");
-						system("xdotool mouseup 7");
+						dpy.click(7);
 					}
 
 
