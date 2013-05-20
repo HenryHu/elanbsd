@@ -245,9 +245,12 @@ public:
 		}
 		return btn;
 	}
-	void release(bool clicked) {
-		if (touched)
+	void release(bool clicked, int &cnt, int max_cnt) {
+		int lcnt = cnt;
+		if (touched) {
 			printf("%d release\n", id);
+			cnt --;
+		}
 		touched = false;
 
 		if (is_tap && !clicked) {
@@ -257,8 +260,16 @@ public:
 				printf("tap timeout\n");
 			} else {
 				printf("tap!\n");
-				dpy->move(mouse_start_x, mouse_start_y);
-				dpy->click(get_btn_id());
+				if (max_cnt == 1) {
+					dpy->move(mouse_start_x, mouse_start_y);
+					dpy->click(get_btn_id());
+				} else if (lcnt == 1 && cnt == 0) {
+					if (max_cnt == 2) {
+						dpy->click(2);
+					} else if (max_cnt == 3) {
+						dpy->click(1);
+					}
+				}
 			}
 		}
 		is_tap = false;
@@ -278,6 +289,7 @@ public:
 class Mouse {
 	int ver_major, ver_minor, ver_step;
 	int x_max, y_max, width;
+	int max_cnt;
 	int hw_ver;
 	int cnt;
 	int fd;
@@ -508,6 +520,7 @@ public:
 			btns[btn].update(btn_down);
 		}
 
+		int lcnt = cnt;
 		switch(type) {
 			case HEAD:
 				{
@@ -557,11 +570,11 @@ public:
 			case STATUS:
 				{
 					int info = buf[1] & 0x1f;
-					int lcnt = cnt;
+					int tcnt = cnt;
 					cnt = 0;
 					for (int i=0; i<ETP_MAX_FINGERS; i++) {
 						if ((info & (1<<i)) == 0) {
-							fingers[i].release(clicked);
+							fingers[i].release(clicked, tcnt, max_cnt);
 						} else {
 							cnt++;
 						}
@@ -569,8 +582,16 @@ public:
 					if (lcnt == 0 && cnt > 0) {
 						clicked = false;
 					}
-					printf("curr count: %d\n", cnt);
+					printf("curr count: %d / %d\n", cnt, tcnt);
 				}
+		}
+
+		if (lcnt == 0 && cnt > 0) {
+			max_cnt = cnt;
+		} else if (cnt > max_cnt) {
+			max_cnt = cnt;
+		} else if (cnt > 0 && lcnt == 0) {
+			max_cnt = 0;
 		}
 	}
 
