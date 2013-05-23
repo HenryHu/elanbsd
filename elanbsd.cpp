@@ -664,26 +664,27 @@ public:
 			if (!fingers[f1].get_delta(dx1, dy1) || !fingers[f2].get_delta(dx2, dy2)) {
 				fingers[f1].save_pos();
 				fingers[f2].save_pos();
-			}
-			if (dy1 > scroll_y_test && dy2 > scroll_y_test) {
-				dpy.click(3);
-				fingers[f1].save_pos();
-				fingers[f2].save_pos();
-			}
-			if (dy1 < -scroll_y_test && dy2 < -scroll_y_test) {
-				dpy.click(4);
-				fingers[f1].save_pos();
-				fingers[f2].save_pos();
-			}
-			if (dx1 > scroll_x_test && dx2 > scroll_x_test) {
-				dpy.click(5);
-				fingers[f1].save_pos();
-				fingers[f2].save_pos();
-			}
-			if (dx1 < -scroll_x_test && dx2 < -scroll_x_test) {
-				dpy.click(6);
-				fingers[f1].save_pos();
-				fingers[f2].save_pos();
+			} else {
+				if (dy1 > scroll_y_test && dy2 > scroll_y_test) {
+					dpy.click(3);
+					fingers[f1].save_pos();
+					fingers[f2].save_pos();
+				}
+				if (dy1 < -scroll_y_test && dy2 < -scroll_y_test) {
+					dpy.click(4);
+					fingers[f1].save_pos();
+					fingers[f2].save_pos();
+				}
+				if (dx1 > scroll_x_test && dx2 > scroll_x_test) {
+					dpy.click(5);
+					fingers[f1].save_pos();
+					fingers[f2].save_pos();
+				}
+				if (dx1 < -scroll_x_test && dx2 < -scroll_x_test) {
+					dpy.click(6);
+					fingers[f1].save_pos();
+					fingers[f2].save_pos();
+				}
 			}
 
 			double cur_dist = fingers[f1].dist(fingers[f2]);
