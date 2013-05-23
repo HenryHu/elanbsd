@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/time.h>
+#include <math.h>
 #ifdef USE_XTEST
 #include <X11/extensions/XTest.h>
 #endif
@@ -315,6 +316,9 @@ public:
 		width = _width;
 	}
 	bool is_touched() { return touched; }
+	double dist(const Finger &other) {
+		return sqrt((other.x - x) * (other.x - x) + (other.y - y) * (other.y - y));
+	}
 };
 
 class Mouse {
@@ -324,7 +328,10 @@ class Mouse {
 	int hw_ver;
 	int cnt;
 	int fd;
+	int ctrl_code;
 	bool clicked;
+	int touch_num;
+	double two_finger_dist;
 	unsigned char cap[3];
 	Finger fingers[ETP_MAX_FINGERS];
 	Button btns[ETP_MAX_BUTTONS];
@@ -344,6 +351,9 @@ public:
 			btns[i].set_id(i);
 			btns[i].dpy = &dpy;
 		}
+		two_finger_dist = -2;
+		ctrl_code = dpy.get_keycode("Control_L");
+		touch_num = 0;
 	}
 	void open_dev() {
 		mousemode_t info;
@@ -511,6 +521,12 @@ public:
 	void enable() {
 		send_cmd(PSMC_ENABLE_DEV);
 	}
+	void update_touch_num() {
+		touch_num = 0;
+		for (int i=0; i<ETP_MAX_FINGERS; i++)
+			if (fingers[i].is_touched())
+				touch_num++;
+	}
 	bool init() {
 		get_hwver();
 		get_cap();
@@ -561,9 +577,10 @@ public:
 					int pres = (buf[1] & 0xf0) | ((buf[4] & 0xf0) >> 4);
 					int traces = (buf[0] & 0xf0) >> 4;
 					printf("id: %d x: %d y: %d pres: %d width: %d\n", id, x, y, pres, traces);
+					fingers[id].set_info(pres, traces);
 					fingers[id].set_pos(x, y, cnt == 1);
 					fingers[id].touch();
-					fingers[id].set_info(pres, traces);
+					update_touch_num();
 
 					break;
 				}
@@ -613,6 +630,7 @@ public:
 					if (lcnt == 0 && cnt > 0) {
 						clicked = false;
 					}
+					update_touch_num();
 					printf("curr count: %d / %d\n", cnt, tcnt);
 				}
 		}
@@ -623,6 +641,41 @@ public:
 			max_cnt = cnt;
 		} else if (cnt > 0 && lcnt == 0) {
 			max_cnt = 0;
+		}
+
+		if (touch_num == 2) {
+			int f1 = -1;
+			int f2 = -1;
+			for (int i=0; i<ETP_MAX_FINGERS; i++) {
+				if (fingers[i].is_touched()) {
+					if (f1 == -1) f1 = i;
+					else {
+						f2 = i;
+						break;
+					}
+				}
+			}
+
+			double cur_dist = fingers[f1].dist(fingers[f2]);
+			if (two_finger_dist > -1) {
+				if (cur_dist > two_finger_dist + x_max / 20) {
+					dpy.key_down(37);
+					dpy.click(3);
+					dpy.key_up(37);
+					two_finger_dist = cur_dist;
+				} else if (cur_dist < two_finger_dist - x_max / 20) {
+					dpy.key_down(37);
+					dpy.click(4);
+					dpy.key_up(37);
+					two_finger_dist = cur_dist;
+				}
+			} else {
+				two_finger_dist = cur_dist;
+			}
+			printf("last dist: %lf\n", two_finger_dist);
+			printf("dist: %lf\n", cur_dist);
+		} else {
+			two_finger_dist = -2;
 		}
 	}
 
