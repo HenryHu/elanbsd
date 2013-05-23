@@ -186,6 +186,7 @@ class Finger {
 	int lx, ly;
 	int x_start, y_start;
 	int vs_last_x, vs_last_y;
+	int saved_x, saved_y;
 	int mouse_start_x, mouse_start_y;
 	int pres, traces;
 	int x_max, y_max, width;
@@ -193,11 +194,13 @@ class Finger {
 	int id;
 	bool is_tap, is_vscroll;
 	bool touched;
+	bool pos_saved;
 public:
 	XDisplay *dpy;
 	Finger() {
 		touched = false;
 		is_tap = false;
+		pos_saved = false;
 	}
 	int get_x() { return x; }
 	int get_y() { return y; }
@@ -319,6 +322,18 @@ public:
 	double dist(const Finger &other) {
 		return sqrt((other.x - x) * (other.x - x) + (other.y - y) * (other.y - y));
 	}
+	bool get_delta(int &dx, int &dy) {
+		if (pos_saved) {
+			dx = x - saved_x;
+			dy = y - saved_y;
+			return true;
+		} else return false;
+	}
+	void save_pos() {
+		saved_x = x;
+		saved_y = y;
+		pos_saved = true;
+	}
 };
 
 class Mouse {
@@ -331,6 +346,7 @@ class Mouse {
 	int ctrl_code;
 	bool clicked;
 	int touch_num;
+	int scroll_x_test, scroll_y_test;
 	double two_finger_dist;
 	unsigned char cap[3];
 	Finger fingers[ETP_MAX_FINGERS];
@@ -516,6 +532,8 @@ public:
 		}
 		for (int i=0; i<ETP_MAX_FINGERS; i++)
 			fingers[i].set_range(x_max, y_max, width);
+		scroll_x_test = x_max / 40;
+		scroll_y_test = y_max / 40;
 		printf("x_max: %d y_max: %d width: %d\n", x_max, y_max, width);
 	}
 	void enable() {
@@ -598,20 +616,6 @@ public:
 					if (sid > 0)
 						fingers[sid].add_delta(dx2, dy2, cnt == 1);
 
-					if (dy1 > 0 && dy2 > 0) {
-						dpy.click(3);
-					}
-					if (dy1 < 0 && dy2 < 0) {
-						dpy.click(4);
-					}
-					if (dx1 > 0 && dx2 > 0) {
-						dpy.click(5);
-					}
-					if (dx1 < 0 && dx2 < 0) {
-						dpy.click(6);
-					}
-
-
 //					printf("%d: %d/%d %d: %d/%d\n", id, dx1, dy1, sid, dx2, dy2);
 					break;
 				}
@@ -654,6 +658,32 @@ public:
 						break;
 					}
 				}
+			}
+
+			int dx1, dx2, dy1, dy2;
+			if (!fingers[f1].get_delta(dx1, dy1) || !fingers[f2].get_delta(dx2, dy2)) {
+				fingers[f1].save_pos();
+				fingers[f2].save_pos();
+			}
+			if (dy1 > scroll_y_test && dy2 > scroll_y_test) {
+				dpy.click(3);
+				fingers[f1].save_pos();
+				fingers[f2].save_pos();
+			}
+			if (dy1 < -scroll_y_test && dy2 < -scroll_y_test) {
+				dpy.click(4);
+				fingers[f1].save_pos();
+				fingers[f2].save_pos();
+			}
+			if (dx1 > scroll_x_test && dx2 > scroll_x_test) {
+				dpy.click(5);
+				fingers[f1].save_pos();
+				fingers[f2].save_pos();
+			}
+			if (dx1 < -scroll_x_test && dx2 < -scroll_x_test) {
+				dpy.click(6);
+				fingers[f1].save_pos();
+				fingers[f2].save_pos();
 			}
 
 			double cur_dist = fingers[f1].dist(fingers[f2]);
