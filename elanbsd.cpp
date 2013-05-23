@@ -329,6 +329,14 @@ public:
 			return true;
 		} else return false;
 	}
+	bool get_delta_dist(double &d) {
+		if (pos_saved) {
+			double dx = x - saved_x;
+			double dy = y - saved_y;
+			d = sqrt(dx*dx + dy*dy);
+			return true;
+		} else return false;
+	}
 	void save_pos() {
 		saved_x = x;
 		saved_y = y;
@@ -345,9 +353,10 @@ class Mouse {
 	int fd;
 	int ctrl_code;
 	bool clicked;
-	int touch_num;
+	int touch_num, last_touch_num;
 	int scroll_x_test, scroll_y_test;
-	double two_finger_dist;
+	bool in_three_drag;
+	double two_finger_dist, three_drag_test;
 	unsigned char cap[3];
 	Finger fingers[ETP_MAX_FINGERS];
 	Button btns[ETP_MAX_BUTTONS];
@@ -370,6 +379,8 @@ public:
 		two_finger_dist = -2;
 		ctrl_code = dpy.get_keycode("Control_L");
 		touch_num = 0;
+		last_touch_num = 0;
+		in_three_drag = false;
 	}
 	void open_dev() {
 		mousemode_t info;
@@ -534,6 +545,7 @@ public:
 			fingers[i].set_range(x_max, y_max, width);
 		scroll_x_test = x_max / 40;
 		scroll_y_test = y_max / 40;
+		three_drag_test = sqrt(x_max * x_max + y_max * y_max) / 20;
 		printf("x_max: %d y_max: %d width: %d\n", x_max, y_max, width);
 	}
 	void enable() {
@@ -596,7 +608,7 @@ public:
 					int traces = (buf[0] & 0xf0) >> 4;
 					printf("id: %d x: %d y: %d pres: %d width: %d\n", id, x, y, pres, traces);
 					fingers[id].set_info(pres, traces);
-					fingers[id].set_pos(x, y, cnt == 1);
+					fingers[id].set_pos(x, y, (cnt == 1) | in_three_drag);
 					fingers[id].touch();
 					update_touch_num();
 
@@ -612,9 +624,9 @@ public:
 					int dx2 = (char)buf[4] * weight;
 					int dy2 = (char)buf[5] * weight;
 
-					fingers[id].add_delta(dx1, dy1, cnt == 1);
+					fingers[id].add_delta(dx1, dy1, (cnt == 1) || in_three_drag);
 					if (sid > 0)
-						fingers[sid].add_delta(dx2, dy2, cnt == 1);
+						fingers[sid].add_delta(dx2, dy2, (cnt == 1) || in_three_drag);
 
 //					printf("%d: %d/%d %d: %d/%d\n", id, dx1, dy1, sid, dx2, dy2);
 					break;
@@ -708,6 +720,44 @@ public:
 		} else {
 			two_finger_dist = -2;
 		}
+		if (touch_num == 3) {
+			if (last_touch_num < 3) {
+
+			}
+
+			int f1, f2, f3;
+			f1 = f2 = f3 = -1;
+			for (int i=0; i<ETP_MAX_FINGERS; i++) {
+				if (fingers[i].is_touched()) {
+					if (f1 < 0) f1 = i;
+					else if (f2 < 0) f2 = i;
+					else {
+						f3 = i;
+						break;
+					}
+				}
+			}
+			double d1, d2, d3;
+			if (!fingers[f1].get_delta_dist(d1) || !fingers[f2].get_delta_dist(d2) || !fingers[f3].get_delta_dist(d3)) {
+				fingers[f1].save_pos();
+				fingers[f2].save_pos();
+				fingers[f3].save_pos();
+			} else {
+				if (d1 > three_drag_test || d2 > three_drag_test || d3 > three_drag_test) {
+					if (!in_three_drag) {
+						dpy.press(true, 0);
+						in_three_drag = true;
+					}
+				}
+			}
+		}
+		if (touch_num == 0) {
+			if (in_three_drag) {
+				in_three_drag = false;
+				dpy.press(false, 0);
+			}
+		}
+		last_touch_num = touch_num;
 	}
 
 	void parse_pkts() {
