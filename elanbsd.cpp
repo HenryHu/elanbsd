@@ -73,7 +73,9 @@ public:
 #endif
 	}
 	~XDisplay() {
+#ifdef USE_XTEST
 		XCloseDisplay(display);
+#endif
 	}
 	void get_mouse_pos(int &x, int &y) {
 		FILE *f = popen("xdotool getmouselocation", "r");
@@ -129,6 +131,35 @@ public:
 #else
 		char buf[1024];
 		snprintf(buf, sizeof(buf), "xdotool mouse%s %d", down ? "down" : "up", id + 1);
+		system(buf);
+#endif
+	}
+	int get_keycode(const string& str) {
+#ifdef USE_XTEST
+		return XKeysymToKeycode(display, XStringToKeysym(str.c_str()));
+#else
+		char buf[1024];
+		snprintf(buf, sizeof(buf), "xmodmap -pke | grep ' %s ' | cut -w -f 2-2", str.c_str());
+		int code;
+		FILE *f = popen(buf, "r");
+		if (fscanf(f, "%d", &code) != 1) errexit("fail to obtain keycode");
+		fclose(f);
+		return code;
+#endif
+	}
+	void key_down(int keycode) {
+		key(true, keycode);
+	}
+	void key_up(int keycode) {
+		key(false, keycode);
+	}
+	void key(bool down, int keycode) {
+#ifdef USE_XTEST
+		XTestFakeKeyEvent(display, keycode, down ? True : False, CurrentTime);
+		XFlush(display);
+#else
+		char buf[1024];
+		snprintf(buf, sizeof(buf), "xdotool key%s %d", down ? "down" : "up", keycode);
 		system(buf);
 #endif
 	}
