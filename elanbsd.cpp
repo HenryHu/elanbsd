@@ -127,7 +127,7 @@ public:
 	void press(bool down, int id) {
 		printf("dpy:press %d,%s\n", id, down ? "down" : "up");
 #ifdef USE_XTEST
-		XTestFakeButtonEvent(display, id, down ? True : False, CurrentTime);
+		XTestFakeButtonEvent(display, id + 1, down ? True : False, CurrentTime);
 		XFlush(display);
 #else
 		char buf[1024];
@@ -176,7 +176,7 @@ public:
 		if (down != state) {
 			down = state;
 			printf("button %d %s\n", id, down ? "down" : "up");
-			dpy->press(down, id + 1);
+			dpy->press(down, id);
 		}
 	}
 };
@@ -215,7 +215,7 @@ public:
 		}
 	}
 	void new_pos(bool domove) {
-		printf("x moved: %d y moved: %d\n", x-x_start, y-y_start);
+		printf("%d: x moved: %d y moved: %d\n", id, x-x_start, y-y_start);
 		if (is_tap)
 			if (abs(x-x_start) > x_max * 2 / width || abs(y-y_start) > y_max * 2 / width) {
 				printf("not tap\n");
