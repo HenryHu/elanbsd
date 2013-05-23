@@ -599,16 +599,16 @@ public:
 						fingers[sid].add_delta(dx2, dy2, cnt == 1);
 
 					if (dy1 > 0 && dy2 > 0) {
-						dpy.click(4);
+						dpy.click(3);
 					}
 					if (dy1 < 0 && dy2 < 0) {
-						dpy.click(5);
+						dpy.click(4);
 					}
 					if (dx1 > 0 && dx2 > 0) {
-						dpy.click(6);
+						dpy.click(5);
 					}
 					if (dx1 < 0 && dx2 < 0) {
-						dpy.click(7);
+						dpy.click(6);
 					}
 
 
