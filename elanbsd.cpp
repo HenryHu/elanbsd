@@ -28,6 +28,7 @@ using namespace std;
 
 const int ETP_XMAX_V2 = 1152;
 const int ETP_YMAX_V2 = 768;
+const int ETP_WIDTH_V2 = 80;
 
 const unsigned char ETP_FW_ID_QUERY = 0x00;
 const unsigned char ETP_FW_VERSION_QUERY = 0x01;
@@ -595,7 +596,7 @@ public:
 						y_max = (cap[2] - max_off) * 64;
 					}
 				}
-				width = 0;
+				width = ETP_WIDTH_V2;
 				break;
 		break;
 			case 4:
