@@ -26,6 +26,9 @@ using namespace std;
 #define PSMC_SET_REMOTE_MODE	0x00f0
 #define PSMC_SET_SAMPLING_RATE	0x00f3
 
+const int ETP_XMAX_V2 = 1152;
+const int ETP_YMAX_V2 = 768;
+
 const unsigned char ETP_FW_ID_QUERY = 0x00;
 const unsigned char ETP_FW_VERSION_QUERY = 0x01;
 const unsigned char ETP_CAPABILITIES_QUERY = 0x02;
@@ -35,6 +38,8 @@ const unsigned char ETP_RESOLUTION_QUERY = 0x04;
 const unsigned char ETP_PS2_CUSTOM_COMMAND = 0xf8;
 
 const unsigned char ETP_REGISTER_READWRITE = 0x00;
+const unsigned char ETP_REGISTER_READ= 0x10;
+const unsigned char ETP_REGISTER_WRITE = 0x11;
 
 const int ETP_MAX_FINGERS = 5;
 const int ETP_MAX_BUTTONS = 20;
@@ -179,6 +184,7 @@ public:
 			dpy->press(down, id);
 		}
 	}
+	bool is_down() { return down; }
 };
 
 class Finger {
@@ -442,7 +448,7 @@ public:
 		unsigned char buf[100];
 		send_cmd(PSMC_SEND_DEV_STATUS, buf, 0, 3);
 //		dump_buf(buf, 3);
-		if (buf[0] == 0x3c && buf[1] == 0x03 && buf[2] == 0x00) {
+		if (buf[0] == 0x3c && buf[1] == 0x03 && (buf[2] == 0x00 || buf[2] == 0xc8)) {
 			printf("Elan Touchpad detected.\n");
 
 			get_ver();
@@ -499,6 +505,9 @@ public:
 	}
 	void get_hwver() {
 		switch(ver_major & 0x0f) {
+			case 4:
+				hw_ver = 2;
+				break;
 			case 6:
 				hw_ver = 4;
 				break;
@@ -511,6 +520,15 @@ public:
 	}
 	void write_reg(int reg, unsigned char val) {
 		switch(hw_ver) {
+			case 2:
+				send_cmd(ETP_PS2_CUSTOM_COMMAND);
+				send_cmd(ETP_REGISTER_WRITE);
+				send_cmd(ETP_PS2_CUSTOM_COMMAND);
+				send_cmd((unsigned char)reg);
+				send_cmd(ETP_PS2_CUSTOM_COMMAND);
+				send_cmd(val);
+				send_cmd(PSMC_SET_SCALING11);
+				break;
 			case 4:
 				send_cmd(ETP_PS2_CUSTOM_COMMAND);
 				send_cmd(ETP_REGISTER_READWRITE);
@@ -526,6 +544,11 @@ public:
 	}
 	void set_absolute() {
 		switch (hw_ver) {
+			case 2:
+				write_reg(0x10, 0x54);
+				write_reg(0x11, 0x88);
+				write_reg(0x21, 0x60);
+				break;
 			case 4:
 				write_reg(7, 1);
 				break;
@@ -534,6 +557,47 @@ public:
 	void get_range() {
 		unsigned char buf[3];
 		switch (hw_ver) {
+			case 2:
+				if (ver_major == 2 && (
+						((ver_minor == 0x08) && (ver_step == 0x00)) ||
+						((ver_minor == 0x0b) && (ver_step == 0x00)) ||
+						((ver_minor == 0x00) && (ver_step == 0x30)))) {
+					x_max = ETP_XMAX_V2;
+					y_max = ETP_YMAX_V2;
+				} else {
+					if (ver_major == 4 && ver_minor == 0x02 && ver_step ==0x16) {
+						x_max = 819;
+						y_max = 405;
+					} else if (ver_major == 4 && ver_minor == 0x02 && (ver_step == 0x19 || ver_step == 0x15)) {
+						x_max = 900;
+						y_max = 500;
+					} else {
+						int max_off;
+
+						if (ver_major == 2 && ver_minor == 0x08 && ver_step > 0) {
+							max_off = 1;
+						} else {
+							max_off = 2;
+						}
+
+						if (ver_major == 0x14) {
+							send_adv_cmd(ETP_FW_ID_QUERY, buf);
+							bool fixed_dpi = buf[1] & 0x10;
+							if (fixed_dpi) {
+								send_adv_cmd(ETP_SAMPLE_QUERY, buf);
+								x_max = (cap[1] - max_off) * buf[1] / 2;
+								y_max = (cap[2] - max_off) * buf[2] / 2;
+								break;
+							}
+						}
+
+						x_max = (cap[1] - max_off) * 64;
+						y_max = (cap[2] - max_off) * 64;
+					}
+				}
+				width = 0;
+				break;
+		break;
 			case 4:
 				send_adv_cmd(ETP_FW_ID_QUERY, buf);
 				x_max = (0x0f & buf[0]) << 8 | buf[1];
@@ -567,7 +631,63 @@ public:
 		return true;
 	}
 
-	void parse_pkt(unsigned char *buf, int len) {
+	void parse_v2(unsigned char *buf, int len) {
+		cnt = (buf[0] & 0xc0) >> 6;
+		int tcnt = cnt;
+
+		btns[0].update(buf[0] & 0x01);
+		btns[2].update(buf[0] & 0x02);
+		if (btns[0].is_down() || btns[2].is_down()) {
+			clicked = true;
+		}
+
+		switch (cnt) {
+			case 3:
+				if (buf[3] & 0x80) {
+					cnt = 4;
+					fingers[3].touch();
+				} else {
+					fingers[3].release(clicked, tcnt, max_cnt);
+				}
+			case 1:
+				{
+					int x = ((buf[1] & 0x0f) << 8 | buf[2]);
+					int y = ((buf[4] & 0x0f) << 8 | buf[5]);
+					int pres = (buf[1] & 0xf0) | ((buf[4] & 0xf0) >> 4);
+					int width = ((buf[0] & 0x30) >> 2) | ((buf[3] & 0x30) >> 4);
+					printf("x: %d y: %d pres: %d width: %d\n", x, y, pres, width);
+					fingers[0].set_info(pres, width);
+					fingers[0].set_pos(x, y, true);
+					fingers[0].touch();
+					if (cnt >= 3) {
+						fingers[1].touch();
+						fingers[2].touch();
+					} else {
+						fingers[1].release(clicked, tcnt, max_cnt);
+						fingers[2].release(clicked, tcnt, max_cnt);
+					}
+
+					break;
+				}
+			case 2:
+				{
+					int x1 = ((buf[0] & 0x10) << 4 | buf[1]) << 2;
+					int y1 = ((buf[0] & 0x20) << 3 | buf[2]) << 2;
+					int x2 = ((buf[3] & 0x10) << 4 | buf[4]) << 2;
+					int y2 = ((buf[3] & 0x20) << 3 | buf[5]) << 2;
+					fingers[0].set_pos(x1, y1, false);
+					fingers[0].touch();
+					fingers[1].set_pos(x1, y1, false);
+					fingers[1].touch();
+					fingers[2].release(clicked, tcnt, max_cnt);
+					fingers[3].release(clicked, tcnt, max_cnt);
+					break;
+				}
+		}
+		update_touch_num();
+	}
+
+	void parse_v4(unsigned char *buf, int len) {
 		int type = UNKNOWN;
 		if ((buf[0] & 0x0c) == 0x04) {
 			switch (buf[3] & 0x1f) {
@@ -597,7 +717,6 @@ public:
 			btns[btn].update(btn_down);
 		}
 
-		int lcnt = cnt;
 		switch(type) {
 			case HEAD:
 				{
@@ -643,19 +762,28 @@ public:
 							cnt++;
 						}
 					}
-					if (lcnt == 0 && cnt > 0) {
-						clicked = false;
-					}
 					update_touch_num();
 					printf("curr count: %d / %d\n", cnt, tcnt);
 				}
 		}
 
+	}
+
+	void parse_pkt(unsigned char *buf, int len) {
+		int lcnt = cnt;
+		switch (hw_ver) {
+			case 2:
+				parse_v2(buf, len);
+			case 4:
+				parse_v4(buf, len);
+		}
 		if (lcnt == 0 && cnt > 0) {
+			clicked = false;
+		}
+
+		if (cnt > max_cnt) {
 			max_cnt = cnt;
-		} else if (cnt > max_cnt) {
-			max_cnt = cnt;
-		} else if (cnt > 0 && lcnt == 0) {
+		} else if (cnt == 0) {
 			max_cnt = 0;
 		}
 
