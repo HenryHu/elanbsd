@@ -775,8 +775,10 @@ public:
 		switch (hw_ver) {
 			case 2:
 				parse_v2(buf, len);
+				break;
 			case 4:
 				parse_v4(buf, len);
+				break;
 		}
 		if (lcnt == 0 && cnt > 0) {
 			clicked = false;
