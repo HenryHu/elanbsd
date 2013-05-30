@@ -678,7 +678,7 @@ public:
 					int y2 = ((buf[3] & 0x20) << 3 | buf[5]) << 2;
 					fingers[0].set_pos(x1, y1, false);
 					fingers[0].touch();
-					fingers[1].set_pos(x1, y1, false);
+					fingers[1].set_pos(x2, y2, false);
 					fingers[1].touch();
 					fingers[2].release(clicked, tcnt, max_cnt);
 					fingers[3].release(clicked, tcnt, max_cnt);
