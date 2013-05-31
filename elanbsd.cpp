@@ -684,6 +684,14 @@ public:
 					fingers[3].release(clicked, tcnt, max_cnt);
 					break;
 				}
+			case 0:
+				{
+					fingers[0].release(clicked, tcnt, max_cnt);
+					fingers[1].release(clicked, tcnt, max_cnt);
+					fingers[2].release(clicked, tcnt, max_cnt);
+					fingers[3].release(clicked, tcnt, max_cnt);
+					break;
+				}
 		}
 		update_touch_num();
 	}
