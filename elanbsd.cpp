@@ -633,8 +633,8 @@ public:
 	}
 
 	void parse_v2(unsigned char *buf, int len) {
-		cnt = (buf[0] & 0xc0) >> 6;
 		int tcnt = cnt;
+		cnt = (buf[0] & 0xc0) >> 6;
 
 		btns[0].update(buf[0] & 0x01);
 		btns[2].update(buf[0] & 0x02);
