@@ -1,12 +1,14 @@
-CXXFLAGS=-I/usr/local/include
-LDFLAGS=-L/usr/local/lib -lXtst
+CXXFLAGS=-I/usr/local/include -pthread
+LDFLAGS=-L/usr/local/lib -lXtst -pthread
 
 OBJS=elanbsd.o
+
+all: elanbsd
 
 elanbsd.o: config.h mouse.h xdisplay.h finger.h button.h
 
 elanbsd: ${OBJS}
-	${CXX} -g ${CXXFLAGS} ${LDFLAGS} ${OBJS} -o $@
+	${CXX} -g ${LDFLAGS} ${OBJS} -o $@
 
 test: elanbsd
 	pkill elanbsd || true
@@ -17,6 +19,6 @@ run: elanbsd
 	./elanbsd &
 
 clean:
-	rm -rf elanbsd
+	rm -rf elanbsd ${OBJS}
 
 .PHONY: clean
