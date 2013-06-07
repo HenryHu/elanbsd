@@ -339,10 +339,11 @@ public:
 					int y = ((buf[4] & 0x0f) << 8 | buf[5]);
 					int pres = (buf[1] & 0xf0) | ((buf[4] & 0xf0) >> 4);
 					int width = ((buf[0] & 0x30) >> 2) | ((buf[3] & 0x30) >> 4);
-					printf("x: %d y: %d pres: %d width: %d\n", x, y, pres, width);
+					printf("[%d] x: %d y: %d pres: %d width: %d main: %d\n", cnt, x, y, pres, width, main_finger_id);
 					if (pres_too_low(pres)) {
 						break;
 					}
+					int old_id = main_finger_id;
 					if (fingers[0].is_touched() && fingers[1].is_touched()) {
 						Finger tmp_finger;
 						tmp_finger.set_pos(x, y, false);
@@ -354,6 +355,8 @@ public:
 					} else if (!fingers[0].is_touched() && !fingers[1].is_touched()) {
 						main_finger_id = 0;
 					}
+					if (old_id != main_finger_id)
+						printf("\tupdated main: %d\n", main_finger_id);
 					fingers[main_finger_id].set_info(pres, width);
 					fingers[main_finger_id].set_pos(x, y, true);
 					fingers[main_finger_id].touch();
@@ -373,6 +376,7 @@ public:
 					int y1 = ((buf[0] & 0x20) << 3 | buf[2]) << 2;
 					int x2 = ((buf[3] & 0x10) << 4 | buf[4]) << 2;
 					int y2 = ((buf[3] & 0x20) << 3 | buf[5]) << 2;
+					printf("[2] x1: %d y1: %d x2: %d y2:%d main: %d\n", x1, y1, x2, y2, main_finger_id);
 					if (main_finger_id < 0) main_finger_id = 0;
 					fingers[main_finger_id].set_pos(x1, y1, false);
 					fingers[main_finger_id].touch();
@@ -384,6 +388,7 @@ public:
 				}
 			case 0:
 				{
+					printf("[0] all gone\n");
 					main_finger_id = -1;
 					fingers[0].release(clicked, tcnt, max_cnt);
 					fingers[1].release(clicked, tcnt, max_cnt);
