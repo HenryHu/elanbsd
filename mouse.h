@@ -39,8 +39,11 @@ class Mouse {
 
 public:
 	// physical distance (mm)
-	inline int get_phy_dist(int dist) {
+	inline double get_phy_dist(double dist) {
 		return dist * width / x_max;
+	}
+	inline double get_px_dist(double phy_dist) {
+		return phy_dist * x_max / width;
 	}
 	Mouse() {
 		for (int i=0; i<ETP_MAX_FINGERS; i++) {
@@ -546,13 +549,13 @@ public:
 			}
 
 			double cur_dist = fingers[f1].dist(fingers[f2]);
-			if (two_finger_dist > -1) {
-				if (cur_dist > two_finger_dist + x_max / 20) {
+			if (two_finger_dist > -1 && dx1*dx2+dy1*dy2<0) {
+				if (cur_dist > two_finger_dist + get_px_dist(ZOOM_DIST_LIMIT)) {
 					dpy.key_down(37);
 					dpy.click(3);
 					dpy.key_up(37);
 					two_finger_dist = cur_dist;
-				} else if (cur_dist < two_finger_dist - x_max / 20) {
+				} else if (cur_dist < two_finger_dist - get_px_dist(ZOOM_DIST_LIMIT)) {
 					dpy.key_down(37);
 					dpy.click(4);
 					dpy.key_up(37);
