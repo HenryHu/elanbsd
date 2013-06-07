@@ -26,6 +26,7 @@ class Mouse {
 	int scroll_x_test, scroll_y_test;
 	bool in_three_drag;
 	double two_finger_dist, three_drag_test;
+	int max_pres;
 	unsigned char cap[3];
 	Finger fingers[ETP_MAX_FINGERS];
 	Button btns[ETP_MAX_BUTTONS];
@@ -54,6 +55,7 @@ public:
 		touch_num = 0;
 		last_touch_num = 0;
 		in_three_drag = false;
+		max_pres = 0;
 	}
 	void open_dev() {
 		mousemode_t info;
@@ -301,6 +303,17 @@ public:
 		return true;
 	}
 
+	bool pres_too_low(int pres) {
+		int limit = PRESSURE_LIMIT;
+		if (pres <= limit) {
+			printf("pressure %d <= limit %d (max %d)\n", pres, limit, max_pres);
+			return true;
+		}
+		if (pres > max_pres)
+			max_pres = pres;
+		return false;
+	}
+
 	void parse_v2(unsigned char *buf, int len) {
 		int tcnt = cnt;
 		cnt = (buf[0] & 0xc0) >> 6;
@@ -326,6 +339,9 @@ public:
 					int pres = (buf[1] & 0xf0) | ((buf[4] & 0xf0) >> 4);
 					int width = ((buf[0] & 0x30) >> 2) | ((buf[3] & 0x30) >> 4);
 					printf("x: %d y: %d pres: %d width: %d\n", x, y, pres, width);
+					if (pres_too_low(pres)) {
+						break;
+					}
 					fingers[0].set_info(pres, width);
 					fingers[0].set_pos(x, y, true);
 					fingers[0].touch();
@@ -404,6 +420,9 @@ public:
 					int pres = (buf[1] & 0xf0) | ((buf[4] & 0xf0) >> 4);
 					int traces = (buf[0] & 0xf0) >> 4;
 					printf("id: %d x: %d y: %d pres: %d width: %d\n", id, x, y, pres, traces);
+					if (pres_too_low(pres)) {
+						break;
+					}
 					fingers[id].set_info(pres, traces);
 					fingers[id].set_pos(x, y, (cnt == 1) | in_three_drag);
 					fingers[id].touch();
