@@ -163,10 +163,11 @@ public:
 		if (is_tap && !clicked && !tap_for_drag) {
 			struct timeval up_time;
 			gettimeofday(&up_time, NULL);
-			if (up_time.tv_sec > down_time.tv_sec || up_time.tv_usec > down_time.tv_usec + 1000 * 100) {
-				printf("tap timeout\n");
+			int delta_time = (up_time.tv_sec - down_time.tv_sec) * 1000 + (up_time.tv_usec - down_time.tv_usec) / 1000;
+			if (delta_time > 100) {
+				printf("tap timeout: %d\n", delta_time);
 			} else {
-				printf("tap!\n");
+				printf("tap! time: %d\n", delta_time);
 				if (max_cnt == 1) {
 					// set a timeout before clicking
 					struct click_timeout_args *args = new struct click_timeout_args();
