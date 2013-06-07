@@ -283,9 +283,9 @@ public:
 		}
 		for (int i=0; i<ETP_MAX_FINGERS; i++)
 			fingers[i].set_range(x_max, y_max, width);
-		scroll_x_test = x_max / 40;
-		scroll_y_test = y_max / 40;
-		three_drag_test = sqrt(x_max * x_max + y_max * y_max) / 20;
+		scroll_x_test = get_px_dist(SCROLL_X_DIST_LIMIT);
+		scroll_y_test = get_px_dist(SCROLL_Y_DIST_LIMIT);
+		three_drag_test = get_px_dist(THREE_DRAG_DIST_LIMIT);
 		printf("x_max: %d y_max: %d width: %d\n", x_max, y_max, width);
 	}
 	void enable() {
