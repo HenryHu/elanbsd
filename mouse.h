@@ -27,6 +27,7 @@ class Mouse {
 	bool in_three_drag;
 	double two_finger_dist, three_drag_test;
 	int max_pres;
+	int main_finger_id;
 	unsigned char cap[3];
 	Finger fingers[ETP_MAX_FINGERS];
 	Button btns[ETP_MAX_BUTTONS];
@@ -342,14 +343,25 @@ public:
 					if (pres_too_low(pres)) {
 						break;
 					}
-					fingers[0].set_info(pres, width);
-					fingers[0].set_pos(x, y, true);
-					fingers[0].touch();
+					if (fingers[0].is_touched() && fingers[1].is_touched()) {
+						Finger tmp_finger;
+						tmp_finger.set_pos(x, y, false);
+						if (fingers[0].dist(tmp_finger) < fingers[1].dist(tmp_finger)) {
+							main_finger_id = 0;
+						} else {
+							main_finger_id = 1;
+						}
+					} else if (!fingers[0].is_touched() && !fingers[1].is_touched()) {
+						main_finger_id = 0;
+					}
+					fingers[main_finger_id].set_info(pres, width);
+					fingers[main_finger_id].set_pos(x, y, true);
+					fingers[main_finger_id].touch();
 					if (cnt >= 3) {
-						fingers[1].touch();
+						fingers[1-main_finger_id].touch();
 						fingers[2].touch();
 					} else {
-						fingers[1].release(clicked, tcnt, max_cnt);
+						fingers[1-main_finger_id].release(clicked, tcnt, max_cnt);
 						fingers[2].release(clicked, tcnt, max_cnt);
 					}
 
@@ -361,16 +373,18 @@ public:
 					int y1 = ((buf[0] & 0x20) << 3 | buf[2]) << 2;
 					int x2 = ((buf[3] & 0x10) << 4 | buf[4]) << 2;
 					int y2 = ((buf[3] & 0x20) << 3 | buf[5]) << 2;
-					fingers[0].set_pos(x1, y1, false);
-					fingers[0].touch();
-					fingers[1].set_pos(x2, y2, false);
-					fingers[1].touch();
+					if (main_finger_id < 0) main_finger_id = 0;
+					fingers[main_finger_id].set_pos(x1, y1, false);
+					fingers[main_finger_id].touch();
+					fingers[1-main_finger_id].set_pos(x2, y2, false);
+					fingers[1-main_finger_id].touch();
 					fingers[2].release(clicked, tcnt, max_cnt);
 					fingers[3].release(clicked, tcnt, max_cnt);
 					break;
 				}
 			case 0:
 				{
+					main_finger_id = -1;
 					fingers[0].release(clicked, tcnt, max_cnt);
 					fingers[1].release(clicked, tcnt, max_cnt);
 					fingers[2].release(clicked, tcnt, max_cnt);
