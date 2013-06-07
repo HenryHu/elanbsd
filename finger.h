@@ -2,6 +2,7 @@
 #define _ELANBSD_FINGER_H_
 
 #include "xdisplay.h"
+#include "elanbsd.h"
 
 #include <stdio.h>
 #include <math.h>
@@ -21,12 +22,16 @@ class Finger {
 	bool is_tap, is_vscroll;
 	bool touched;
 	bool pos_saved;
+	bool tap_for_drag;
+	bool test_tap_drag;
 	XDisplay *dpy;
 public:
 	Finger() {
 		touched = false;
 		is_tap = false;
 		pos_saved = false;
+		tap_for_drag = false;
+		test_tap_drag = false;
 	}
 	void set_dpy(XDisplay *newdpy) { dpy = newdpy; }
 	int get_x() { return x; }
@@ -100,6 +105,12 @@ public:
 			// if it is tap, restore position
 			dpy->get_mouse_pos(mouse_start_x, mouse_start_y);
 			gettimeofday(&down_time, NULL);
+
+			if (test_tap_drag) {
+				tap_for_drag = true;
+				printf("tap: start drag!\n");
+				dpy->press(true, 0);
+			}
 		}
 		touched = true;
 	}
@@ -119,16 +130,37 @@ public:
 		}
 		return btn;
 	}
+	struct click_timeout_args {
+		Finger *finger;
+		int btn_id, start_x, start_y;
+	};
+	static void click_timeout(void *arg) {
+		struct click_timeout_args *args = (struct click_timeout_args *)arg;
+		if (args->finger->tap_for_drag) {
+			delete args;
+			return;
+		}
+		printf("tap: a real tap\n");
+		args->finger->dpy->move(args->start_x, args->start_y);
+		args->finger->dpy->click(args->btn_id);
+		args->finger->test_tap_drag = false;
+		delete args;
+	}
 	void release(bool clicked, int &cnt, int max_cnt) {
 		int lcnt = cnt;
 		if (touched) {
 			printf("%d release\n", id);
 			cnt --;
+			if (test_tap_drag && tap_for_drag) {
+				printf("tap: stop drag!\n");
+				dpy->press(false, 0);
+			}
 		}
 		touched = false;
+		test_tap_drag = false;
 
 		// if we moved 
-		if (is_tap && !clicked) {
+		if (is_tap && !clicked && !tap_for_drag) {
 			struct timeval up_time;
 			gettimeofday(&up_time, NULL);
 			if (up_time.tv_sec > down_time.tv_sec || up_time.tv_usec > down_time.tv_usec + 1000 * 100) {
@@ -136,8 +168,16 @@ public:
 			} else {
 				printf("tap!\n");
 				if (max_cnt == 1) {
-					dpy->move(mouse_start_x, mouse_start_y);
-					dpy->click(get_btn_id());
+					// set a timeout before clicking
+					struct click_timeout_args *args = new struct click_timeout_args();
+					tap_for_drag = false;
+					test_tap_drag = true;
+					printf("tap delayed: test for drag\n");
+					args->finger = this;
+					args->btn_id = get_btn_id();
+					args->start_x = mouse_start_x;
+					args->start_y = mouse_start_y;
+					create_timeout(click_timeout, args, 200);
 					// You cannot simply say "cnt == 0"
 					// because multiple fingers may be released in the same event
 					// (Although this should not happen)
@@ -151,6 +191,7 @@ public:
 			}
 		}
 		is_tap = false;
+		tap_for_drag = false;
 	}
 	void set_info(int newpres, int newtraces) {
 		pres = newpres;

@@ -47,4 +47,6 @@ inline void errexit(const std::string& err) {
 	exit(errno);
 }
 
+void create_timeout(void (*timeout_func)(void* arg), void *arg, int ms);
+
 #endif // _ELANBSD_ELANBSD_H_
