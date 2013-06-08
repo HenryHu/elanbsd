@@ -33,6 +33,9 @@ public:
 		tap_for_drag = false;
 		test_tap_drag = false;
 	}
+	inline double get_px_dist(double phy_dist) {
+		return phy_dist * x_max / width;
+	}
 	void set_dpy(XDisplay *newdpy) { dpy = newdpy; }
 	int get_x() { return x; }
 	int get_y() { return y; }
@@ -40,7 +43,7 @@ public:
 		id = newid;
 	}
 	bool in_vscroll() {
-		if (x > x_max * 9 / 10) {
+		if (x > x_max * VSCROLL_RANGE) {
 			return true;
 		} else {
 			return false;
@@ -50,7 +53,7 @@ public:
 		printf("%d: x moved: %d y moved: %d\n", id, x-x_start, y-y_start);
 		if (is_tap)
 			// if we moved too far from the starting point, then it is not a tap
-			if (abs(x-x_start) > x_max * 2 / width || abs(y-y_start) > y_max * 2 / width) {
+			if (abs(x-x_start) > x_max * TAP_X_LIMIT / width || abs(y-y_start) > y_max * TAP_Y_LIMIT / width) {
 				printf("not tap\n");
 				is_tap = false;
 			}
@@ -61,12 +64,11 @@ public:
 			if (is_vscroll) {
 				int dx = x - vs_last_x;
 				int dy = y - vs_last_y;
-				// TODO: configurable distance
-				if (dy > y_max / 50) {
+				if (dy > get_px_dist(VSCROLL_LIMIT)) {
 					dpy->click(3);
 					vs_last_x = x;
 					vs_last_y = y;
-				} else if (dy < -y_max / 50) {
+				} else if (dy < -get_px_dist(VSCROLL_LIMIT)) {
 					dpy->click(4);
 					vs_last_x = x;
 					vs_last_y = y;
@@ -117,10 +119,10 @@ public:
 	int get_btn_id() {
 		int btn;
 		// TODO: configurable area
-		if (y < y_max / 5) {
-			if (x < x_max * 2 / 5) {
+		if (y < y_max * BTN_RANGE_Y) {
+			if (x < x_max * BTN_0_RANGE_X) {
 				btn = 0;
-			} else if (x > x_max * 3 / 5) {
+			} else if (x > x_max * BTN_2_RANGE_X) {
 				btn = 2;
 			} else {
 				btn = 1;
@@ -164,7 +166,7 @@ public:
 			struct timeval up_time;
 			gettimeofday(&up_time, NULL);
 			int delta_time = (up_time.tv_sec - down_time.tv_sec) * 1000 + (up_time.tv_usec - down_time.tv_usec) / 1000;
-			if (delta_time > 100) {
+			if (delta_time > TAP_TIMEOUT) {
 				printf("tap timeout: %d\n", delta_time);
 			} else {
 				printf("tap! time: %d\n", delta_time);
@@ -178,7 +180,7 @@ public:
 					args->btn_id = get_btn_id();
 					args->start_x = mouse_start_x;
 					args->start_y = mouse_start_y;
-					create_timeout(click_timeout, args, 200);
+					create_timeout(click_timeout, args, TAP_TO_DRAG_TIMEOUT);
 					// You cannot simply say "cnt == 0"
 					// because multiple fingers may be released in the same event
 					// (Although this should not happen)

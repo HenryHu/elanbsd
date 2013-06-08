@@ -8,6 +8,7 @@
 #endif
 
 #include <stdio.h>
+#include <math.h>
 #include "elanbsd.h"
 
 class XDisplay {
@@ -60,8 +61,8 @@ class XDisplay {
 	}
 
 	void move_rel(int dx, int dy, int x_max, int y_max) {
-		int rx = dx * dpy_x / x_max;
-		int ry = -dy * dpy_y / y_max;
+		int rx = round(dx * dpy_x * MOVE_X_SCALE / x_max);
+		int ry = round(-dy * dpy_y * MOVE_Y_SCALE / y_max);
 		printf("dpy:move_rel %d,%d\n", rx, ry);
 		if (rx == 0 && ry == 0) return;
 #ifdef USE_XTEST
