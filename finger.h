@@ -36,6 +36,10 @@ public:
 	inline double get_px_dist(double phy_dist) {
 		return phy_dist * x_max / width;
 	}
+	// physical distance (mm)
+	inline double get_phy_dist(double dist) {
+		return fabs(dist) * width / x_max;
+	}
 	void set_dpy(XDisplay *newdpy) { dpy = newdpy; }
 	int get_x() { return x; }
 	int get_y() { return y; }
@@ -74,7 +78,13 @@ public:
 					vs_last_y = y;
 				}
 			} else {
-				dpy->move_rel(x - lx, y - ly, x_max, y_max);
+				int dx = x - lx;
+				int dy = y - ly;
+				if (dx != 0 && dy != 0)
+					if (get_phy_dist(dx) >= MOVE_DX_LIMIT || get_phy_dist(dy) >= MOVE_DY_LIMIT)
+						dpy->move_rel(dx, dy, x_max, y_max);
+					else
+						printf("movement filtered: dx=%f dy=%f limit=%f,%f\n", get_phy_dist(dx), get_phy_dist(dy), MOVE_DX_LIMIT, MOVE_DY_LIMIT);
 			}
 		}
 		lx = x;
