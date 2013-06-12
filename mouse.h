@@ -60,6 +60,7 @@ public:
 		last_touch_num = 0;
 		in_three_drag = false;
 		max_pres = 0;
+		main_finger_id = -1;
 	}
 	void open_dev() {
 		mousemode_t info;
