@@ -25,6 +25,8 @@ class Finger {
 	bool tap_for_drag;
 	bool test_tap_drag;
 	XDisplay *dpy;
+	int history_x[HISTORY_LEN], history_y[HISTORY_LEN];
+	int history_pos, history_cnt;
 public:
 	Finger() {
 		touched = false;
@@ -32,6 +34,8 @@ public:
 		pos_saved = false;
 		tap_for_drag = false;
 		test_tap_drag = false;
+		history_pos = 0;
+		history_cnt = 0;
 	}
 	inline double get_px_dist(double phy_dist) {
 		return phy_dist * x_max / width;
@@ -52,6 +56,45 @@ public:
 		} else {
 			return false;
 		}
+	}
+	int accel(int arg) {
+		return (ACCEL_SCALE + abs(arg)) * arg / (ACCEL_SCALE + ACCEL_ACCELERATION);
+	}
+	void add_history(int dx, int dy) {
+		static long last_tick = 0;
+		struct timeval tv;
+		dx = accel(dx);
+		dy = accel(dy);
+
+		gettimeofday(&tv, NULL);
+		printf("%ld(%ld) new history: %d %d\n", tv.tv_usec,
+				(tv.tv_usec - last_tick + 1000000) % 1000000, dx, dy);
+		last_tick = tv.tv_usec;
+		history_x[history_pos] = dx;
+		history_y[history_pos] = dy;
+		history_pos = (history_pos + 1) % HISTORY_LEN;
+		if (history_cnt < HISTORY_LEN)
+			history_cnt++;
+	}
+	void get_average(double &avg_x, double &avg_y) {
+		double sx = 0, sy = 0;
+		int weight = 0;
+		int window_size = AVG_WINDOW_SIZE;
+		if (history_cnt < window_size) window_size = history_cnt;
+		int avg_pos = (history_pos - 1 + HISTORY_LEN) % HISTORY_LEN;
+		for (int i=0; i<window_size; i++) {
+			sx += history_x[avg_pos] * AVG_WINDOW[i];
+			sy += history_y[avg_pos] * AVG_WINDOW[i];
+			weight += AVG_WINDOW[i];
+			if (avg_pos == 0)
+				avg_pos = HISTORY_LEN - 1;
+			else
+				avg_pos -= 1;
+		}
+		avg_x = sx / weight;
+		avg_y = sy / weight;
+		printf("len: %d avg_x: %f avg_y: %f pos: %d\n", history_cnt, avg_x, avg_y,
+				history_pos);
 	}
 	void new_pos(bool domove) {
 		printf("%d: x moved: %d y moved: %d\n", id, x-x_start, y-y_start);
@@ -80,12 +123,17 @@ public:
 			} else {
 				int dx = x - lx;
 				int dy = y - ly;
-				if (dx != 0 && dy != 0) {
-					if (get_phy_dist(dx) >= MOVE_DX_LIMIT || get_phy_dist(dy) >= MOVE_DY_LIMIT) {
-						dpy->move_rel(dx, dy, x_max, y_max);
-					} else {
-						printf("movement filtered: dx=%f dy=%f limit=%f,%f\n", get_phy_dist(dx), get_phy_dist(dy), MOVE_DX_LIMIT, MOVE_DY_LIMIT);
-					}
+				add_history(dx, dy);
+				double avg_x, avg_y;
+				get_average(avg_x, avg_y);
+				printf("avg. movement: %f %f\n", avg_x, avg_y);
+				if (get_phy_dist(avg_x) >= MOVE_DX_LIMIT
+						|| get_phy_dist(avg_y) >= MOVE_DY_LIMIT) {
+					dpy->move_rel(avg_x, avg_y, x_max, y_max);
+				} else {
+					printf("movement filtered: dx=%f dy=%f limit=%f,%f\n",
+							get_phy_dist(dx), get_phy_dist(dy),
+							MOVE_DX_LIMIT, MOVE_DY_LIMIT);
 				}
 			}
 		}
@@ -173,6 +221,7 @@ public:
 		touched = false;
 		pos_saved = false;
 		test_tap_drag = false;
+		history_cnt = 0;
 
 		// if we moved 
 		if (is_tap && !clicked && !tap_for_drag) {

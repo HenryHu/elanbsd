@@ -60,7 +60,7 @@ class XDisplay {
 #endif
 	}
 
-	void move_rel(int dx, int dy, int x_max, int y_max) {
+	void move_rel(double dx, double dy, int x_max, int y_max) {
 		int rx = round(dx * dpy_x * MOVE_X_SCALE / x_max);
 		int ry = round(-dy * dpy_y * MOVE_Y_SCALE / y_max);
 		printf("dpy:move_rel %d,%d\n", rx, ry);

@@ -55,7 +55,14 @@ const double BTN_2_RANGE_X = 0.6; // x range for button 2 range: (0, 1)
 const int TAP_TIMEOUT = 100; // max touching time for a tap (ms)
 const int TAP_TO_DRAG_TIMEOUT = 200; // tap-to-drag timeout (ms)
 
-const double MOVE_DX_LIMIT = 0.25; // minimum physical x movement to trigger movement (mm)
-const double MOVE_DY_LIMIT = 0.25; // minimum physical y movement to trigger movement (mm)
+const double MOVE_DX_LIMIT = 0.1; // minimum physical x movement to trigger movement (mm)
+const double MOVE_DY_LIMIT = 0.1; // minimum physical y movement to trigger movement (mm)
+
+const int HISTORY_LEN = 20; // number of data points to store
+const int AVG_WINDOW_SIZE = 4; // number of data points used to calculate average
+const int AVG_WINDOW[] = {10, 8, 3, -1};
+
+const int ACCEL_SCALE = 100;
+const int ACCEL_ACCELERATION = 10;
 
 #endif //  _ELANBSD_CONFIG_H_
