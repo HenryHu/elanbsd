@@ -80,11 +80,13 @@ public:
 			} else {
 				int dx = x - lx;
 				int dy = y - ly;
-				if (dx != 0 && dy != 0)
-					if (get_phy_dist(dx) >= MOVE_DX_LIMIT || get_phy_dist(dy) >= MOVE_DY_LIMIT)
+				if (dx != 0 && dy != 0) {
+					if (get_phy_dist(dx) >= MOVE_DX_LIMIT || get_phy_dist(dy) >= MOVE_DY_LIMIT) {
 						dpy->move_rel(dx, dy, x_max, y_max);
-					else
+					} else {
 						printf("movement filtered: dx=%f dy=%f limit=%f,%f\n", get_phy_dist(dx), get_phy_dist(dy), MOVE_DX_LIMIT, MOVE_DY_LIMIT);
+					}
+				}
 			}
 		}
 		lx = x;
