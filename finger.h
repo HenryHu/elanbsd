@@ -169,6 +169,7 @@ public:
 			}
 		}
 		touched = false;
+		pos_saved = false;
 		test_tap_drag = false;
 
 		// if we moved 
