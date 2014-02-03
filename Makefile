@@ -1,5 +1,5 @@
 CXXFLAGS=-I/usr/local/include -pthread
-LDFLAGS=-L/usr/local/lib -lXtst -pthread
+LDFLAGS=-L/usr/local/lib -lXtst -pthread -lX11
 
 OBJS=elanbsd.o
 

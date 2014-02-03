@@ -12,6 +12,7 @@
 #include <fcntl.h>
 #include <sys/mouse.h>
 #include <math.h>
+#include <unistd.h>
 
 class Mouse {
 	int ver_major, ver_minor, ver_step;
