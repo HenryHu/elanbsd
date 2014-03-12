@@ -21,7 +21,7 @@ class XDisplay {
 	XDisplay() {
 		FILE *f = popen("xdotool getdisplaygeometry", "r");
 		fscanf(f, "%d %d", &dpy_x, &dpy_y);
-		fclose(f);
+		pclose(f);
 #ifdef USE_XTEST
 		display = XOpenDisplay(NULL);
 		if (!display)
@@ -43,7 +43,7 @@ class XDisplay {
 	void get_mouse_pos(int &x, int &y) {
 		FILE *f = popen("xdotool getmouselocation", "r");
 		fscanf(f, "x:%d y:%d", &x, &y);
-		fclose(f);
+		pclose(f);
 	}
 
 	void move(int x, int y) {
@@ -108,7 +108,7 @@ class XDisplay {
 		int code;
 		FILE *f = popen(buf, "r");
 		if (fscanf(f, "%d", &code) != 1) errexit("fail to obtain keycode");
-		fclose(f);
+		pclose(f);
 		return code;
 #endif
 	}
