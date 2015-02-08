@@ -295,4 +295,4 @@ public:
 };
 
 
-#endif // _ELANBSD_MOUSE_H_
+#endif // _ELANBSD_FINGER_H_
