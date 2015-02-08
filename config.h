@@ -65,4 +65,6 @@ const int AVG_WINDOW[] = {10, 8, 3, -1};
 const int ACCEL_SCALE = 100;
 const int ACCEL_ACCELERATION = 10;
 
+const int DISABLE_TAP = 1;
+
 #endif //  _ELANBSD_CONFIG_H_

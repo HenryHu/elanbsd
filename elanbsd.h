@@ -43,6 +43,7 @@ const int STATUS = 3;
 const int UNKNOWN = 0;
 
 inline void errexit(const std::string& err) {
+    std::cerr << strerror(errno) << std::endl;
 	std::cerr << err << std::endl;
 	exit(errno);
 }
