@@ -30,6 +30,7 @@ class Mouse {
 	int max_pres;
 	int main_finger_id;
 	unsigned char cap[3];
+    int scrollPosY, scrollNegY, scrollPosX, scrollNegX;
 	Finger fingers[ETP_MAX_FINGERS];
 	Button btns[ETP_MAX_BUTTONS];
 
@@ -55,6 +56,10 @@ public:
 			btns[i].set_id(i);
 			btns[i].set_dpy(&dpy);
 		}
+        scrollPosX = TWO_FINGER_NATURAL_SCROLL ? SCROLL_RIGHT : SCROLL_LEFT;
+        scrollNegX = TWO_FINGER_NATURAL_SCROLL ? SCROLL_LEFT : SCROLL_RIGHT;
+        scrollPosY = TWO_FINGER_NATURAL_SCROLL ? SCROLL_TOP : SCROLL_BOTTOM;
+        scrollNegY = TWO_FINGER_NATURAL_SCROLL ? SCROLL_BOTTOM : SCROLL_TOP;
 		two_finger_dist = -2;
 		ctrl_code = dpy.get_keycode("Control_L");
 		touch_num = 0;
@@ -529,22 +534,22 @@ public:
 				fingers[f2].save_pos();
 			} else {
 				if (dy1 > scroll_y_test && dy2 > scroll_y_test) {
-					dpy.click(3);
+					dpy.click(scrollPosY);
 					fingers[f1].save_pos();
 					fingers[f2].save_pos();
 				}
 				if (dy1 < -scroll_y_test && dy2 < -scroll_y_test) {
-					dpy.click(4);
+					dpy.click(scrollNegY);
 					fingers[f1].save_pos();
 					fingers[f2].save_pos();
 				}
 				if (dx1 > scroll_x_test && dx2 > scroll_x_test) {
-					dpy.click(5);
+					dpy.click(scrollPosX);
 					fingers[f1].save_pos();
 					fingers[f2].save_pos();
 				}
 				if (dx1 < -scroll_x_test && dx2 < -scroll_x_test) {
-					dpy.click(6);
+					dpy.click(scrollNegX);
 					fingers[f1].save_pos();
 					fingers[f2].save_pos();
 				}

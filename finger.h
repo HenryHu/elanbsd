@@ -224,7 +224,7 @@ public:
 		history_cnt = 0;
 
 		// if we moved 
-		if (is_tap && !clicked && !tap_for_drag) {
+		if (is_tap && !clicked && !tap_for_drag && !DISABLE_TAP) {
 			struct timeval up_time;
 			gettimeofday(&up_time, NULL);
 			int delta_time = (up_time.tv_sec - down_time.tv_sec) * 1000 + (up_time.tv_usec - down_time.tv_usec) / 1000;
@@ -295,4 +295,4 @@ public:
 };
 
 
-#endif // _ELANBSD_MOUSE_H_
+#endif // _ELANBSD_FINGER_H_
