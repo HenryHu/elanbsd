@@ -5,7 +5,7 @@
 
 const int PRESSURE_LIMIT = 15; // range: 0~255 (v4)
 
-const int ZOOM_DIST_LIMIT = 8; // zoom step physical limit (mm)
+const int ZOOM_DIST_LIMIT = 12; // zoom step physical limit (mm)
 const int SCROLL_X_DIST_LIMIT = 4; // physical x dist to scroll (mm)
 const int SCROLL_Y_DIST_LIMIT = 4; // physical y dist to scroll (mm)
 const int VSCROLL_LIMIT = 1; // physical y dist to trigger a vscroll (mm)
@@ -66,5 +66,6 @@ const int ACCEL_SCALE = 100;
 const int ACCEL_ACCELERATION = 10;
 
 const int DISABLE_TAP = 1;
+const bool TWO_FINGER_NATURAL_SCROLL = true;
 
 #endif //  _ELANBSD_CONFIG_H_

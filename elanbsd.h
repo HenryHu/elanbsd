@@ -42,6 +42,12 @@ const int MOTION = 2;
 const int STATUS = 3;
 const int UNKNOWN = 0;
 
+// scroll click numbers
+const int SCROLL_TOP = 4;
+const int SCROLL_BOTTOM = 3;
+const int SCROLL_RIGHT = 5;
+const int SCROLL_LEFT = 6;
+
 inline void errexit(const std::string& err) {
     std::cerr << strerror(errno) << std::endl;
 	std::cerr << err << std::endl;
