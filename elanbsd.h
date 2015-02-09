@@ -49,7 +49,7 @@ const int SCROLL_RIGHT = 5;
 const int SCROLL_LEFT = 6;
 
 inline void errexit(const std::string& err) {
-    std::cerr << strerror(errno) << std::endl;
+	std::cerr << strerror(errno) << std::endl;
 	std::cerr << err << std::endl;
 	exit(errno);
 }

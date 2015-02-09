@@ -109,7 +109,7 @@ public:
 		if (touched && domove) {
 			// for vscroll, we send an event after certain amount of movement
 			if (is_vscroll) {
-				int dx = x - vs_last_x;
+//				int dx = x - vs_last_x;
 				int dy = y - vs_last_y;
 				if (dy > get_px_dist(VSCROLL_LIMIT)) {
 					dpy->click(3);

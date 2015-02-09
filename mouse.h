@@ -30,7 +30,7 @@ class Mouse {
 	int max_pres;
 	int main_finger_id;
 	unsigned char cap[3];
-    int scrollPosY, scrollNegY, scrollPosX, scrollNegX;
+	int scrollPosY, scrollNegY, scrollPosX, scrollNegX;
 	Finger fingers[ETP_MAX_FINGERS];
 	Button btns[ETP_MAX_BUTTONS];
 
@@ -56,10 +56,10 @@ public:
 			btns[i].set_id(i);
 			btns[i].set_dpy(&dpy);
 		}
-        scrollPosX = TWO_FINGER_NATURAL_SCROLL ? SCROLL_RIGHT : SCROLL_LEFT;
-        scrollNegX = TWO_FINGER_NATURAL_SCROLL ? SCROLL_LEFT : SCROLL_RIGHT;
-        scrollPosY = TWO_FINGER_NATURAL_SCROLL ? SCROLL_TOP : SCROLL_BOTTOM;
-        scrollNegY = TWO_FINGER_NATURAL_SCROLL ? SCROLL_BOTTOM : SCROLL_TOP;
+		scrollPosX = TWO_FINGER_NATURAL_SCROLL ? SCROLL_RIGHT : SCROLL_LEFT;
+		scrollNegX = TWO_FINGER_NATURAL_SCROLL ? SCROLL_LEFT : SCROLL_RIGHT;
+		scrollPosY = TWO_FINGER_NATURAL_SCROLL ? SCROLL_TOP : SCROLL_BOTTOM;
+		scrollNegY = TWO_FINGER_NATURAL_SCROLL ? SCROLL_BOTTOM : SCROLL_TOP;
 		two_finger_dist = -2;
 		ctrl_code = dpy.get_keycode("Control_L");
 		touch_num = 0;
@@ -69,7 +69,7 @@ public:
 		main_finger_id = -1;
 	}
 	void open_dev() {
-		mousemode_t info;
+//		mousemode_t info;
 		// open blocking mode device
 		fd = open("/dev/bpsm0", O_RDWR);
 		if (fd < 0) errexit("fail to open psm0");
