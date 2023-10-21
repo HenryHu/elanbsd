@@ -1,5 +1,5 @@
-CXXFLAGS=-I/usr/local/include -pthread
-LDFLAGS=-L/usr/local/lib -lXtst -pthread -lX11
+CXXFLAGS=`pkg-config --cflags x11 xtst` -pthread
+LDFLAGS=`pkg-config --libs x11 xtst` -pthread
 
 OBJS=elanbsd.o
 
